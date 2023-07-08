@@ -4,6 +4,8 @@ namespace App\Console\Commands;
 
 
 
+use App\Models\PrizeDrawDay;
+use App\Models\Result;
 use Carbon\Carbon;
 use Carbon\CarbonPeriod;
 use Goutte\Client;
@@ -50,37 +52,19 @@ class CrawlerCommand extends Command
         foreach ($urls as $key => $url) {
             $response = $this->_doCrawl($key, $url);
         }
-
-//        $url = 'https://xsmn.mobi/xsmb-6-7-2023.html';
-//        $client = new Client();
-//        $crawler = $client->request('GET', $url);
-//
-//        $crawler->filter('table.kqmb tbody tr')->each(function (Crawler $node) {
-//            $name = $node->filter('td.txt-giai')->text();
-//            $value = $node->filter('td.v-giai ')->text();
-//            $wholeStar = $node->filter('td span.number')->count();
-//            if ($wholeStar > 1) {
-//                $values = $node->filter('td span.number')->each(function (Crawler $node) {
-//                    return $node->text();
-//                });
-//                $this->items[$name] = $values;
-//            } else {
-//                $this->items[$name] = [$value];
-//            }
-//        });
-//
-//        $data = array_values($this->items);
-//        unset($data[0]);
-//        dd($data);
     }
 
     protected function _doCrawl($key, $url)
     {
-//        $prizeDay = DB::table('prize_draw_days')->where('key', $key)->first();
-//        if ($prizeDay) {
-//            return false;
-//        }
-        //$prizeDay = DB::table('prize_draw_days')->store
+        $key = Carbon::parse($key)->toDateString();
+        $prizeDay = PrizeDrawDay::query()->where('date', $key)->first();
+        if ($prizeDay) {
+            return false;
+        }
+
+        $prizeDay = PrizeDrawDay::query()->create([
+            'date' => $key
+        ]);
         $client = new Client();
         $crawler = $client->request('GET', $url);
 
@@ -99,8 +83,22 @@ class CrawlerCommand extends Command
         });
 
         $data = array_values($this->items);
-        dd($key,$data);
         unset( $data[0]);
+        $insertItems = [];
+        foreach ($data as $key => $items) {
+            foreach ($items as $item) {
+                $insertItems[] = [
+                    'day_id' => $prizeDay->id,
+                    'level_id' => $key,
+                    'value' => $item,
+                    'loto' => $this->_getLoto($item),
+                    'first_number' => $this->_getFirstNumber($item),
+                    'last_number' => $this->_getLastNumber($item)
+                ];
+            }
+        }
+
+        Result::query()->insert($insertItems);
     }
 
     protected function _getFirstNumber($num) : int
@@ -111,5 +109,13 @@ class CrawlerCommand extends Command
     protected function _getLastNumber($num) : int
     {
         return $num % 10;
+    }
+
+    protected function _getLoto($number)
+    {
+        // Chuyển số thành chuỗi
+        $numberString = (string)$number;
+        // Lấy hai số cuối
+        return substr($numberString, -2);
     }
 }

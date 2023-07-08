@@ -16,6 +16,7 @@ return new class extends Migration
             $table->integer('day_id');
             $table->integer('level_id');
             $table->integer('value');
+            $table->integer('loto');
             $table->integer('first_number');
             $table->integer('last_number');
             $table->timestamps();
