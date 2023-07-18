@@ -36,7 +36,7 @@ class CrawlerCommand extends Command
      */
     public function handle()
     {
-        $end = Carbon::now()->subDay();
+        $end = Carbon::now();
         $endStr = $end->toDateTimeString();
         $start = $end->subDays(100);
         $period = CarbonPeriod::create($start->toDateTimeString(), $endStr);
