@@ -38,7 +38,7 @@ class CrawlerCommand extends Command
     {
         $end = Carbon::now();
         $endStr = $end->toDateTimeString();
-        $start = $end->subDays(100);
+        $start = $end->subDays(150);
         $period = CarbonPeriod::create($start->toDateTimeString(), $endStr);
         $urls  = [];
         foreach ($period as $date) {
@@ -83,7 +83,9 @@ class CrawlerCommand extends Command
         });
 
         $data = array_values($this->items);
-        unset( $data[0]);
+        unset($data[0]);
+        $prizeDay->result_special = $this->_getLoto($data[1][0]);
+        $prizeDay->save();
         $insertItems = [];
         foreach ($data as $key => $items) {
             foreach ($items as $item) {
@@ -97,7 +99,6 @@ class CrawlerCommand extends Command
                 ];
             }
         }
-
         Result::query()->insert($insertItems);
     }
 

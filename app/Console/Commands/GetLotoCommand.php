@@ -30,7 +30,7 @@ class GetLotoCommand extends Command
     public function handle()
     {
         $results = [];
-        for ($i = 1; $i <= 100; $i ++) {
+        for ($i = 1; $i <= 30; $i ++) {
             $result = $this->_reportResult($i);
             $results[] = $result;
         }
@@ -46,8 +46,9 @@ class GetLotoCommand extends Command
     {
         //$subDay = 2;
         $endObj = Carbon::now()->subDays($subDay);
+        $endOb = Carbon::now()->subDays($subDay);
         $end = Carbon::now()->subDays($subDay)->toDateString();
-        $start = Carbon::now()->subDays(100)->toDateString();
+        $start = $endOb->subDays(30)->toDateString();
 
         $dataFirstNumber = Result::query()
             ->select(DB::raw('first_number, count(*) as total'))
@@ -74,13 +75,12 @@ class GetLotoCommand extends Command
             ->toArray();
 
         $numbers = [];
-        
+
         foreach ($dataFirstNumber as $first) {
             foreach ($dataLastNumber as $last) {
                 $numbers[] = $first.$last;
             }
         }
-        dd(implode(',', $numbers), $end, $start, $dataFirstNumber , $dataLastNumber);
         $currentDay = $endObj->addDay();
         $isExist = PrizeDrawDay::query()
                     ->join('results', 'prize_draw_days.id', '=', 'results.day_id')
@@ -91,7 +91,10 @@ class GetLotoCommand extends Command
         return [
             'day' => $currentDay->toDateString(),
             'status' => !empty($isExist),
-            'value' => !empty($isExist) ? $isExist->loto: null
+            'value' => !empty($isExist) ? $isExist->loto: null,
+            'date_start' => $start,
+            'date_end' => $end,
+            'numbers_random' => json_encode($numbers),
         ];
     }
 }
