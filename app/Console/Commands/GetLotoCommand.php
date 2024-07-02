@@ -7,6 +7,12 @@ use App\Models\Result;
 use Carbon\Carbon;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\DB;
+use Phpml\Classification\Ensemble\RandomForest;
+use Phpml\NeuralNetwork\ActivationFunction\Sigmoid;
+use Phpml\NeuralNetwork\Layer;
+use Phpml\NeuralNetwork\Training\Backpropagation;
+use Phpml\Regression\LeastSquares;
+use Phpml\NeuralNetwork\Network\MultilayerPerceptron;
 
 class GetLotoCommand extends Command
 {
@@ -29,12 +35,92 @@ class GetLotoCommand extends Command
      */
     public function handle()
     {
-        $results = [];
-        for ($i = 1; $i <= 30; $i ++) {
-            $result = $this->_reportResult($i);
-            $results[] = $result;
+        $days = PrizeDrawDay::query()->where([
+            ['date', '>=', '2024-05-01']
+        ])->get();
+
+        $listResults = [];
+        $totalTrue = 0;
+        $totalFalse = 0;
+        foreach ($days as $day) {
+
+            $result = Result::query()->whereIn('level_id', [1, 2])->where('day_id', $day->id)->get();
+            $a = 0;
+            $b = 0;
+            foreach ($result as $item) {
+                if ($item->level_id == 1) {
+                    $a = $item->value;
+                }
+                if ($item->level_id == 2) {
+                    $b = $item->value;
+                }
+            }
+
+            if (empty($a) || empty($b)) {
+                continue;
+            }
+
+            $loto = $this->solveProblem($a, $b);
+            if ((int)$loto < 10) {
+                $loto = "0".$loto;
+            }
+
+            $loto2 = strrev($loto);
+
+            //kiem tra kết quả có ở ngày tiếp theo không?
+            $nextDay = Carbon::parse($day->date)->addDay()->toDateString();
+
+            $nextPrizeDrawDay = PrizeDrawDay::query()->where('date', $nextDay)->first();
+            if (!$nextPrizeDrawDay) {
+                continue;
+            }
+
+            $result = Result::query()->where('day_id', $nextPrizeDrawDay->id)->whereIn('loto', [
+                $loto, $loto2
+            ])->count();
+
+            $listResults[] = [
+                'old_date' => $day->date,
+                'loto' => $loto,
+                'result' => !empty($result),
+                'next_day' => $nextDay
+            ];
+            if (!empty($result)) {
+                $totalTrue++;
+            } else {
+                $totalFalse++;
+            }
         }
-        dd($results);
+        dd($totalTrue, $totalFalse, $listResults);
+
+    }
+
+    public function solveProblem($specialPrize, $firstPrize) {
+
+        $combinedNumber = sprintf('%05d%05d', $specialPrize, $firstPrize); // Ghép thành một chuỗi số 10 chữ số
+
+        // Bước 2: Tính theo công thức Pascal
+        $currentNumber = str_split($combinedNumber); // Chuyển chuỗi thành mảng các ký tự
+
+        while (true) {
+            $nextNumber = [];
+            for ($i = 0; $i < count($currentNumber) - 1; $i++) {
+                $sum = (int)$currentNumber[$i] + (int)$currentNumber[$i + 1];
+                if ($sum >= 10) {
+                    $sum = $sum % 10;
+                }
+                $nextNumber[] = $sum;
+            }
+            $currentNumber = $nextNumber;
+
+            $lastNumber = (int)implode('', $currentNumber);
+            if ($lastNumber < 100) {
+                break;
+            }
+        }
+
+        // Kết quả là số cuối cùng còn lại
+        return implode('', $currentNumber);
     }
 
     protected function get64Number()
