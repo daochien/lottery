@@ -38,10 +38,10 @@ class CrawlerCommand extends Command
     {
         $end = Carbon::now();
         $endStr = $end->toDateTimeString();
-        $start = $end->subDay();
+        $start = $end->subDays(8);
         $period = CarbonPeriod::create($start->toDateTimeString(), $endStr);
         $urls  = [];
-        ;
+
         foreach ($period as $date) {
             $day = $date->day;
             $month = $date->month;

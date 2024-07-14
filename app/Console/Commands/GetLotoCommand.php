@@ -36,7 +36,7 @@ class GetLotoCommand extends Command
     public function handle()
     {
         $days = PrizeDrawDay::query()->where([
-            ['date', '>=', '2024-05-01']
+            ['date', '<=', '2024-07-14']
         ])->get();
 
         $listResults = [];
@@ -44,9 +44,11 @@ class GetLotoCommand extends Command
         $totalFalse = 0;
         foreach ($days as $day) {
 
-            $result = Result::query()->whereIn('level_id', [1, 2])->where('day_id', $day->id)->get();
+            $result = Result::query()->whereIn('level_id', [1, 2, 3])->where('day_id', $day->id)->get();
             $a = 0;
             $b = 0;
+            $c = 0;
+            $d = 0;
             foreach ($result as $item) {
                 if ($item->level_id == 1) {
                     $a = $item->value;
@@ -54,17 +56,33 @@ class GetLotoCommand extends Command
                 if ($item->level_id == 2) {
                     $b = $item->value;
                 }
+                if ($item->level_id == 3) {
+                    if ($c == 0) {
+                        $c = $item->value;
+                    } else {
+                        $d = $item->value;
+                    }
+                }
             }
 
             if (empty($a) || empty($b)) {
                 continue;
             }
+//
+//            $loto = $this->solveProblem($b, $a);
+//
+//            if ((int)$loto < 10) {
+//                $loto = "0".$loto;
+//            }
 
-            $loto = $this->solveProblem($a, $b);
-            if ((int)$loto < 10) {
-                $loto = "0".$loto;
+            $number = $a.$b.$c.$d;
+            $array = str_split($number);
+            $array = array_map('intval', $array);
+
+            $loto = array_sum($array);
+            if ($loto >= 100) {
+                $loto = $this->solveProblem(0, 0, $loto);
             }
-
             $loto2 = strrev($loto);
 
             //kiem tra kết quả có ở ngày tiếp theo không?
@@ -75,17 +93,17 @@ class GetLotoCommand extends Command
                 continue;
             }
 
-            $result = Result::query()->where('day_id', $nextPrizeDrawDay->id)->whereIn('loto', [
-                $loto, $loto2
-            ])->count();
+            $result1 = Result::query()->where('day_id', $nextPrizeDrawDay->id)->where('loto', $loto)->count();
 
+            $result2 = Result::query()->where('day_id', $nextPrizeDrawDay->id)->where('loto', $loto2)->count();
+            $isWin = !empty($result1) || !empty($result2);
             $listResults[] = [
                 'old_date' => $day->date,
                 'loto' => $loto,
-                'result' => !empty($result),
+                'result' => $isWin,
                 'next_day' => $nextDay
             ];
-            if (!empty($result)) {
+            if (!empty($isWin)) {
                 $totalTrue++;
             } else {
                 $totalFalse++;
@@ -95,12 +113,15 @@ class GetLotoCommand extends Command
 
     }
 
-    public function solveProblem($specialPrize, $firstPrize) {
+    public function solveProblem($specialPrize, $firstPrize, $total = 0) {
+        if ($total == 0) {
+            $combinedNumber = sprintf('%05d%05d', $specialPrize, $firstPrize); // Ghép thành một chuỗi số 10 chữ số
 
-        $combinedNumber = sprintf('%05d%05d', $specialPrize, $firstPrize); // Ghép thành một chuỗi số 10 chữ số
-
-        // Bước 2: Tính theo công thức Pascal
-        $currentNumber = str_split($combinedNumber); // Chuyển chuỗi thành mảng các ký tự
+            // Bước 2: Tính theo công thức Pascal
+            $currentNumber = str_split($combinedNumber); // Chuyển chuỗi thành mảng các ký tự
+        } else {
+            $currentNumber = str_split($total); // Chuyển chuỗi thành mảng các ký tự
+        }
 
         while (true) {
             $nextNumber = [];
