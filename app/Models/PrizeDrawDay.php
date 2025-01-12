@@ -13,6 +13,12 @@ class PrizeDrawDay extends Model
 
     protected $fillable = [
         'date',
-        'result_special'
+        'result_special',
+        'day_label'
     ];
+
+    public function results()
+    {
+        return $this->hasMany(Result::class, 'day_id');
+    }
 }

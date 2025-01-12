@@ -36,9 +36,11 @@ class CrawlerCommand extends Command
      */
     public function handle()
     {
+//        $this->_doCrawl('1-3-2024', 'https://xsmn.mobi/xsmb-1-3-2024.html');
+//        dd('xxx');
         $end = Carbon::now();
         $endStr = $end->toDateTimeString();
-        $start = $end->subDays(8);
+        $start = Carbon::parse('2025-01-01');
         $period = CarbonPeriod::create($start->toDateTimeString(), $endStr);
         $urls  = [];
 
@@ -70,7 +72,8 @@ class CrawlerCommand extends Command
             }
 
             $prizeDay = PrizeDrawDay::query()->create([
-                'date' => $key
+                'date' => $key,
+                'day_label' => Carbon::parse($key)->locale('vi')->dayName
             ]);
             $client = new Client();
             $crawler = $client->request('GET', $url);
@@ -90,7 +93,12 @@ class CrawlerCommand extends Command
             });
 
             $data = array_values($this->items);
+
             unset($data[0]);
+
+            if (empty($data[1][0])) {
+                return false;
+            }
             $prizeDay->result_special = $this->_getLoto($data[1][0]);
             $prizeDay->save();
             $insertItems = [];
