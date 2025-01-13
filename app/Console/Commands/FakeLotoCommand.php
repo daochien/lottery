@@ -31,7 +31,7 @@ class FakeLotoCommand extends Command
 //        $results = [];
 //        $this->combineNumbers("", $number, $results);
 //        dd(implode(',', $results));
-        $this->soi_cau_lo_tam_giac('2025-01-01', '2025-01-31');
+        $this->soi_cau_lo_tam_giac('2024-09-01', '2024-09-31');
 
     }
 
@@ -91,8 +91,8 @@ class FakeLotoCommand extends Command
                     ->whereIn('loto', [$kq1, $kq2])
                     ->whereIn('date', [
                         Carbon::parse($item->date)->addDay()->toDateString(),
-//                        Carbon::parse($item->date)->addDays(2)->toDateString(),
-//                        Carbon::parse($item->date)->addDays(3)->toDateString(),
+                        Carbon::parse($item->date)->addDays(2)->toDateString(),
+                        Carbon::parse($item->date)->addDays(3)->toDateString(),
                     ])
                     ->count();
 
